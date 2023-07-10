@@ -8,7 +8,10 @@
         <li class="mb-4" v-for="(distance, index) in distances" :key="index">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-900 font-bold">Vers : {{ distance.address.formatted_address }}</p>
+              <p class="text-sm text-gray-900 font-bold">Vers : {{ distance.address.name }}
+                <a
+                  :href="distance.address.url" target="_blank" rel="noopener noreferrer"
+                  class="text-xs font-normal">🔗&nbsp;({{ distance.address.formatted_address }})</a></p>
               <p class="mt-1 text-sm" :class="colorByTime(distance.walking.duration.value)">
                 À pied : {{ distance.walking ? `${distance.walking.duration.text} (${distance.walking.distance.text})` : 'Calcul en cours...' }}
               </p>

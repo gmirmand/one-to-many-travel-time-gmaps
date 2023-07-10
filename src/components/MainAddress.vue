@@ -15,7 +15,10 @@
     </div>
     <div v-if="locationStore.mainAddress" class="mt-4">
       <h2 class="text-lg font-medium text-gray-900">Adresse principale :</h2>
-      <p class="mt-1 text-sm text-gray-600">{{ locationStore.mainAddress.formatted_address }}</p>
+      <a
+          :href="locationStore.mainAddress.url"
+          target="_blank"
+          class="mt-1 text-sm text-gray-600">🔗&nbsp;{{ locationStore.mainAddress.formatted_address }}</a>
     </div>
   </div>
 </template>
