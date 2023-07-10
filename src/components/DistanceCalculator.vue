@@ -9,19 +9,21 @@
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm text-gray-900 font-bold">Vers : {{ distance.address.formatted_address }}</p>
-              <p class="mt-1 text-sm text-gray-600">À pied : {{ distance.walking || 'Calcul en cours...' }}</p>
-              <p class="mt-1 text-sm text-gray-600">En voiture : {{
-                  distance.driving || 'Calcul en cours...'
-                }}</p>
-              <p class="mt-1 text-sm text-gray-600">En transport : {{
-                  distance.transit || 'Calcul en cours...'
-                }}</p>
+              <p class="mt-1 text-sm" :class="colorByTime(distance.walking.duration.value)">
+                À pied : {{ distance.walking ? `${distance.walking.duration.text} (${distance.walking.distance.text})` : 'Calcul en cours...' }}
+              </p>
+              <p class="mt-1 text-sm" :class="colorByTime(distance.driving.duration.value)">
+                En voiture : {{ distance.driving ? `${distance.driving.duration.text} (${distance.driving.distance.text})` : 'Calcul en cours...' }}
+              </p>
+              <p class="mt-1 text-sm" :class="colorByTime(distance.transit.duration.value)">
+                En transport : {{ distance.transit ? `${distance.transit.duration.text} (${distance.transit.distance.text})` : 'Calcul en cours...' }}
+              </p>
             </div>
           </div>
         </li>
       </ul>
     </div>
-    <!--    no secondary addresses -->
+
     <div v-else>
       <p class="mt-4 text-sm text-gray-600">Ajoutez une adresse secondaire pour calculer les distances.</p>
     </div>
@@ -86,7 +88,10 @@ export default {
                     ...distances.value,
                     [index]: {
                       ...distances.value[index],
-                      [mode.toLowerCase()]: `${response.rows[0].elements[0].duration.text} (${response.rows[0].elements[0].distance.text})`,
+                      [mode.toLowerCase()]: {
+                        duration: response.rows[0].elements[0].duration,
+                        distance: response.rows[0].elements[0].distance,
+                      }
                     },
                   };
                 }
@@ -95,9 +100,23 @@ export default {
           });
     }
 
+    function colorByTime(duration) {
+      const minutes = duration / 60;
+      if (minutes <= 15) {
+        return 'text-green-500';
+      } else if (minutes <= 30) {
+        return 'text-yellow-500';
+      } else if (minutes <= 45) {
+        return 'text-orange-500';
+      } else {
+        return 'text-red-500';
+      }
+    };
+
     return {
       locationStore,
       distances,
+      colorByTime,
     };
   },
 };
