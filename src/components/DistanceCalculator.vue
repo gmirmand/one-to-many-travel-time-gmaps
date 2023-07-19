@@ -2,25 +2,31 @@
 <template>
   <div class="p-4 border-t border-gray-200">
     <h2 class="text-lg font-medium text-gray-900">Distances</h2>
+
     <div v-if="locationStore.mainAddress && locationStore.secondaryAddresses.length > 0">
       <h3 class="mt-4 text-sm font-medium text-gray-700">De : {{ locationStore.mainAddress.formatted_address }}</h3>
       <ul class="mt-2 space-y-2 flex items-center flex-col">
-        <li class="mb-4" v-for="(distance, index) in distances" :key="index">
+        <li v-for="(address, index) in locationStore.secondaryAddresses" :key="index" class="mb-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-900 font-bold">Vers : {{ distance.address.name }}
+              <p class="text-sm text-gray-900 font-bold">Vers : {{ address.name }}
                 <a
-                  :href="distance.address.url" target="_blank" rel="noopener noreferrer"
-                  class="text-xs font-normal">🔗&nbsp;({{ distance.address.formatted_address }})</a></p>
-              <p class="mt-1 text-sm" :class="colorByTime(distance.walking.duration.value)">
-                À pied : {{ distance.walking ? `${distance.walking.duration.text} (${distance.walking.distance.text})` : 'Calcul en cours...' }}
+                    :href="address.url" class="text-xs font-normal" rel="noopener noreferrer"
+                    target="_blank">🔗&nbsp;({{ address.formatted_address }})</a>
               </p>
-              <p class="mt-1 text-sm" :class="colorByTime(distance.driving.duration.value)">
-                En voiture : {{ distance.driving ? `${distance.driving.duration.text} (${distance.driving.distance.text})` : 'Calcul en cours...' }}
-              </p>
-              <p class="mt-1 text-sm" :class="colorByTime(distance.transit.duration.value)">
-                En transport : {{ distance.transit ? `${distance.transit.duration.text} (${distance.transit.distance.text})` : 'Calcul en cours...' }}
-              </p>
+
+                <p v-if="getDistance(address, 'walking')" :class="colorByTime(getDistance(address, 'walking').duration?.value)" class="mt-1 text-sm">
+                  À pied : {{ getDistance(address, 'walking').duration ? `${getDistance(address, 'walking').duration.text} (${getDistance(address, 'walking').distance.text})` : 'Trajet impossible' }}
+                </p>
+                <p v-else class="mt-1 text-sm text-gray-600">Calcul en cours...</p>
+                <p v-if="getDistance(address, 'driving')" :class="colorByTime(getDistance(address, 'driving').duration?.value)" class="mt-1 text-sm">
+                  En voiture : {{ getDistance(address, 'driving').duration ? `${getDistance(address, 'driving').duration.text} (${getDistance(address, 'driving').distance.text})` : 'Trajet impossible' }}
+                </p>
+                <p v-else class="mt-1 text-sm text-gray-600">Calcul en cours...</p>
+                <p v-if="getDistance(address, 'transit')" :class="colorByTime(getDistance(address, 'transit').duration?.value)" class="mt-1 text-sm">
+                  En transport : {{ getDistance(address, 'transit').duration ? `${getDistance(address, 'transit').duration.text} (${getDistance(address, 'transit').distance.text})` : 'Trajet impossible' }}
+                </p>
+                <p v-else class="mt-1 text-sm text-gray-600">Calcul en cours...</p>
             </div>
           </div>
         </li>
@@ -58,7 +64,7 @@ export default {
         // ajout
         checkGoogleAndCalculateDistances();
       }
-    }, {deep: true});
+    }, { deep: true });
 
     function checkGoogleAndCalculateDistances() {
       if (typeof google === 'undefined') {
@@ -67,58 +73,59 @@ export default {
         calculateDistances();
       }
     }
+
     function calculateDistances() {
       const service = new google.maps.DistanceMatrixService();
 
       locationStore.secondaryAddresses
-          .forEach((secondaryAddress, index) => {
-            // add adress destination in distances
-            distances.value = {
-              ...distances.value,
-              [index]: {
-                address: secondaryAddress,
-              },
-            };
+          .forEach((secondaryAddress) => {
             ['DRIVING', 'WALKING', 'TRANSIT']
                 .forEach((mode) => {
-              service.getDistanceMatrix({
-                origins: [locationStore.mainAddress.formatted_address],
-                destinations: [secondaryAddress.formatted_address],
-                travelMode: mode,
-              }, (response, status) => {
-                if (status === 'OK') {
-                  distances.value = {
-                    ...distances.value,
-                    [index]: {
-                      ...distances.value[index],
-                      [mode.toLowerCase()]: {
-                        duration: response.rows[0].elements[0].duration,
-                        distance: response.rows[0].elements[0].distance,
+                  if(!locationStore.getDistance(locationStore.mainAddress.reference, secondaryAddress.reference, mode.toLowerCase())) {
+                    console.info(`%c Calcul de la distance ${locationStore.mainAddress.formatted_address} vers ${secondaryAddress.formatted_address} en ${mode.toLowerCase()}`, 'color: #9c27b0');
+
+                    service.getDistanceMatrix({
+                      origins: [locationStore.mainAddress.formatted_address],
+                      destinations: [secondaryAddress.formatted_address],
+                      travelMode: mode,
+                    }, (response, status) => {
+                      if (status === 'OK') {
+                        locationStore.addDistance(locationStore.mainAddress.reference, secondaryAddress.reference, mode.toLowerCase(), {
+                          duration: response.rows[0].elements[0]?.duration,
+                          distance: response.rows[0].elements[0]?.distance,
+                        });
                       }
-                    },
-                  };
-                }
-              });
-            });
+                    });
+                  } else {
+                    console.info(`%c Distance ${locationStore.mainAddress.formatted_address} vers ${secondaryAddress.formatted_address} en ${mode.toLowerCase()} déjà calculée`, 'color: #4caf50');
+                  }
+                });
           });
+    }
+
+    function getDistance(address, mode) {
+      return locationStore.getDistance(locationStore.mainAddress.reference, address.reference, mode);
     }
 
     function colorByTime(duration) {
       const minutes = duration / 60;
-      if (minutes <= 15) {
+      if(!duration) {
+        return 'text-gray-600';
+      } else if (minutes <= 15) {
         return 'text-green-500';
       } else if (minutes <= 30) {
-        return 'text-yellow-500';
+        return 'text-yellow-600';
       } else if (minutes <= 45) {
         return 'text-orange-500';
       } else {
         return 'text-red-500';
       }
-    };
+    }
 
     return {
       locationStore,
       distances,
+      getDistance,
       colorByTime,
     };
   },

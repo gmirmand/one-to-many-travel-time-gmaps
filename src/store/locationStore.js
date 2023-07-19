@@ -7,12 +7,16 @@ export const useLocationStore = defineStore('location', {
   state: () => ({
     mainAddress: null,
     secondaryAddresses: [],
+    distances: {},
   }),
   // Les getters pour le store
   getters: {
     numberOfSecondaryAddresses(state) {
       return state.secondaryAddresses.length;
     },
+    getDistance: (state) => (from, to, mode) => {
+      return state.distances[`${from}-${to}-${mode}`];
+    }
   },
   // Les actions pour le store
   actions: {
@@ -29,5 +33,8 @@ export const useLocationStore = defineStore('location', {
       this.mainAddress = null;
       this.secondaryAddresses = [];
     },
-  }
+    addDistance(from, to, mode, distance) {
+      this.distances[`${from}-${to}-${mode}`] = distance;
+    },
+  },
 })
