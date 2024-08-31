@@ -11,22 +11,41 @@
             <div>
               <p class="text-sm text-gray-900 font-bold">Vers : {{ address.name }}
                 <a
-                    :href="address.url" class="text-xs font-normal" rel="noopener noreferrer"
-                    target="_blank">🔗&nbsp;({{ address.formatted_address }})</a>
+                  :href="address.url" class="text-xs font-normal" rel="noopener noreferrer"
+                  target="_blank">🔗&nbsp;({{ address.formatted_address }})</a>
               </p>
 
-                <p v-if="getDistance(address, 'walking')" :class="colorByTime(getDistance(address, 'walking').duration?.value)" class="mt-1 text-sm">
-                  À pied : {{ getDistance(address, 'walking').duration ? `${getDistance(address, 'walking').duration.text} (${getDistance(address, 'walking').distance.text})` : 'Trajet impossible' }}
-                </p>
-                <p v-else class="mt-1 text-sm text-gray-600">Calcul en cours...</p>
-                <p v-if="getDistance(address, 'driving')" :class="colorByTime(getDistance(address, 'driving').duration?.value)" class="mt-1 text-sm">
-                  En voiture : {{ getDistance(address, 'driving').duration ? `${getDistance(address, 'driving').duration.text} (${getDistance(address, 'driving').distance.text})` : 'Trajet impossible' }}
-                </p>
-                <p v-else class="mt-1 text-sm text-gray-600">Calcul en cours...</p>
-                <p v-if="getDistance(address, 'transit')" :class="colorByTime(getDistance(address, 'transit').duration?.value)" class="mt-1 text-sm">
-                  En transport : {{ getDistance(address, 'transit').duration ? `${getDistance(address, 'transit').duration.text} (${getDistance(address, 'transit').distance.text})` : 'Trajet impossible' }}
-                </p>
-                <p v-else class="mt-1 text-sm text-gray-600">Calcul en cours...</p>
+              <p
+                v-if="getDistance(address, 'walking')"
+                :class="colorByTime(getDistance(address, 'walking').duration?.value)" class="mt-1 text-sm">
+                À pied : {{
+                  getDistance(address, 'walking').duration ? `${getDistance(address, 'walking').duration.text} (${getDistance(address, 'walking').distance.text})` : 'Trajet impossible'
+                }}
+              </p>
+              <p
+                v-if="getDistance(address, 'bicycling')"
+                :class="colorByTime(getDistance(address, 'bicycling').duration?.value)" class="mt-1 text-sm">
+                À vélo : {{
+                  getDistance(address, 'bicycling').duration ? `${getDistance(address, 'bicycling').duration.text} (${getDistance(address, 'bicycling').distance.text})` : 'Trajet impossible'
+                }}
+              </p>
+              <p v-else class="mt-1 text-sm text-gray-600">Calcul en cours...</p>
+              <p
+                v-if="getDistance(address, 'driving')"
+                :class="colorByTime(getDistance(address, 'driving').duration?.value)" class="mt-1 text-sm">
+                En voiture : {{
+                  getDistance(address, 'driving').duration ? `${getDistance(address, 'driving').duration.text} (${getDistance(address, 'driving').distance.text})` : 'Trajet impossible'
+                }}
+              </p>
+              <p v-else class="mt-1 text-sm text-gray-600">Calcul en cours...</p>
+              <p
+                v-if="getDistance(address, 'transit')"
+                :class="colorByTime(getDistance(address, 'transit').duration?.value)" class="mt-1 text-sm">
+                En transport : {{
+                  getDistance(address, 'transit').duration ? `${getDistance(address, 'transit').duration.text} (${getDistance(address, 'transit').distance.text})` : 'Trajet impossible'
+                }}
+              </p>
+              <p v-else class="mt-1 text-sm text-gray-600">Calcul en cours...</p>
             </div>
           </div>
         </li>
@@ -40,8 +59,8 @@
 </template>
 
 <script>
-import {onMounted, ref, watch} from 'vue';
-import {useLocationStore} from '@/store/locationStore';
+import { onMounted, ref, watch } from 'vue';
+import { useLocationStore } from '@/store/locationStore';
 
 export default {
   setup() {
@@ -58,7 +77,8 @@ export default {
       // on vérifie si c'est un ajout ou une suppression d'adresse secondaire
       if (Object.keys(distances.value).length > locationStore.secondaryAddresses.length) {
         // suppression
-        const index = Object.keys(distances.value).find((index) => !locationStore.secondaryAddresses[index]);
+        const index = Object.keys(distances.value)
+          .find((index) => !locationStore.secondaryAddresses[index]);
         delete distances.value[index];
       } else {
         // ajout
@@ -78,29 +98,29 @@ export default {
       const service = new google.maps.DistanceMatrixService();
 
       locationStore.secondaryAddresses
-          .forEach((secondaryAddress) => {
-            ['DRIVING', 'WALKING', 'TRANSIT']
-                .forEach((mode) => {
-                  if(!locationStore.getDistance(locationStore.mainAddress.reference, secondaryAddress.reference, mode.toLowerCase())) {
-                    console.info(`%c Calcul de la distance ${locationStore.mainAddress.formatted_address} vers ${secondaryAddress.formatted_address} en ${mode.toLowerCase()}`, 'color: #9c27b0');
+        .forEach((secondaryAddress) => {
+          ['DRIVING', 'WALKING', 'TRANSIT', 'BICYCLING']
+            .forEach((mode) => {
+              if (!locationStore.getDistance(locationStore.mainAddress.reference, secondaryAddress.reference, mode.toLowerCase())) {
+                console.info(`%c Calcul de la distance ${locationStore.mainAddress.formatted_address} vers ${secondaryAddress.formatted_address} en ${mode.toLowerCase()}`, 'color: #9c27b0');
 
-                    service.getDistanceMatrix({
-                      origins: [locationStore.mainAddress.formatted_address],
-                      destinations: [secondaryAddress.formatted_address],
-                      travelMode: mode,
-                    }, (response, status) => {
-                      if (status === 'OK') {
-                        locationStore.addDistance(locationStore.mainAddress.reference, secondaryAddress.reference, mode.toLowerCase(), {
-                          duration: response.rows[0].elements[0]?.duration,
-                          distance: response.rows[0].elements[0]?.distance,
-                        });
-                      }
+                service.getDistanceMatrix({
+                  origins: [locationStore.mainAddress.formatted_address],
+                  destinations: [secondaryAddress.formatted_address],
+                  travelMode: mode,
+                }, (response, status) => {
+                  if (status === 'OK') {
+                    locationStore.addDistance(locationStore.mainAddress.reference, secondaryAddress.reference, mode.toLowerCase(), {
+                      duration: response.rows[0].elements[0]?.duration,
+                      distance: response.rows[0].elements[0]?.distance,
                     });
-                  } else {
-                    console.info(`%c Distance ${locationStore.mainAddress.formatted_address} vers ${secondaryAddress.formatted_address} en ${mode.toLowerCase()} déjà calculée`, 'color: #4caf50');
                   }
                 });
-          });
+              } else {
+                console.info(`%c Distance ${locationStore.mainAddress.formatted_address} vers ${secondaryAddress.formatted_address} en ${mode.toLowerCase()} déjà calculée`, 'color: #4caf50');
+              }
+            });
+        });
     }
 
     function getDistance(address, mode) {
@@ -109,7 +129,7 @@ export default {
 
     function colorByTime(duration) {
       const minutes = duration / 60;
-      if(!duration) {
+      if (!duration) {
         return 'text-gray-600';
       } else if (minutes <= 15) {
         return 'text-green-500';
